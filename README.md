@@ -16,8 +16,7 @@ Tool to merge many GWAS summary statistics into one file ready to use in [MMP](h
 After downloading the binary from the [release page](https://github.com/FINNGEN/mmpio/releases), just do:
 
 ```sh
-mv mmp-* mmp
-chmod +x mmp
+tar xf mmp-*.tar
 ./mmp
 ```
 
