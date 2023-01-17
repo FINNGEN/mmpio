@@ -13,8 +13,12 @@ Tool to merge many GWAS summary statistics into one file ready to use in [MMP](h
 
 **Run**
 
+After downloading the binary from the [release page](https://github.com/FINNGEN/mmpio/releases), just do:
+
 ```sh
-go run .
+mv mmp-* mmp
+chmod +x mmp
+./mmp
 ```
 
 This outputs a `mmp.tsv` file ready for upload on [MMP](https://geneviz.aalto.fi/MMP/dashboard/).
