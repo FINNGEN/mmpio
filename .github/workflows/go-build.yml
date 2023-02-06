@@ -12,7 +12,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.20
+          go-version: 1.19
 
       - name: Build (linux x86-64)
         run: env GOOS=linux GOARCH=amd64 go build -v ./... && tar -cvf mmp-linux-x86-64.tar mmp
