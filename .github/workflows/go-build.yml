@@ -22,6 +22,9 @@ jobs:
 
       - name: Build (macOS ARM)
         run: env GOOS=darwin GOARCH=arm64 go build -v ./... && tar -cvf mmp-macos-arm64.tar mmp
+        
+      - name: Build (Windows x86-64)
+        run: env GOOS=windows GOARCH=amd64 go build -v ./... && tar -cvf mmp-windows-x86-64.tar mmp
 
       - name: Test
         run: go test -v ./...
@@ -40,3 +43,8 @@ jobs:
         with:
           name: mmp-macos-arm64.tar
           path: mmp-macos-arm64.tar
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: mmp-windows-x86-64.tar
+          path: mmp-windows-x86-64.tar
