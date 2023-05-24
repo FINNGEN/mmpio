@@ -1,28 +1,72 @@
-[
-  {
-    "tag": "Dataset1",
-    "filepath": "path_to_dataset1_GWAS_summary_stats.gz",
-    "col_chrom": "#chrom",
-    "col_pos": "pos",
-    "col_ref": "ref",
-    "col_alt": "alt",
-    "col_pval": "pval",
-    "col_beta": "beta",
-    "col_sebeta": "sebeta",
-    "col_af": "af_alt",
-    "pval_threshold": 1e-06
-  },
-  {
-    "tag": "Dataset2",
-    "filepath": "path_to_dataset2_GWAS_summary_stats.gz",
-    "col_chrom": "CHR",
-    "col_pos": "POS",
-    "col_ref": "REF",
-    "col_alt": "ALT",
-    "col_pval": "PVAL",
-    "col_beta": "BETA",
-    "col_sebeta": "SEBETA",
-    "col_af": "AF_ALT",
-    "pval_threshold": 1e-06
-  }
-]
+{
+  "inputs": [
+    {
+      "tag": "Dataset1",
+      "filepath": "path_to_dataset1_GWAS_summary_stats.gz",
+      "col_chrom": "#chrom",
+      "col_pos": "pos",
+      "col_ref": "ref",
+      "col_alt": "alt",
+      "col_pval": "pval",
+      "col_beta": "beta",
+      "col_sebeta": "sebeta",
+      "col_af": "af_alt",
+      "pval_threshold": 0.000001
+    },
+    {
+      "tag": "Dataset2",
+      "filepath": "path_to_dataset2_GWAS_summary_stats.gz",
+      "col_chrom": "CHR",
+      "col_pos": "POS",
+      "col_ref": "REF",
+      "col_alt": "ALT",
+      "col_pval": "PVAL",
+      "col_beta": "BETA",
+      "col_sebeta": "SEBETA",
+      "col_af": "AF_ALT",
+      "pval_threshold": 0.000001
+    },
+    {
+      "tag": "Dataset3",
+      "filepath": "path_to_dataset3_GWAS_summary_stats.gz",
+      "col_chrom": "#chrom",
+      "col_pos": "pos",
+      "col_ref": "ref",
+      "col_alt": "alt",
+      "col_pval": "pval",
+      "col_beta": "beta",
+      "col_sebeta": "sebeta",
+      "col_af": "af_alt",
+      "pval_threshold": 0.000001
+    },
+    {
+      "tag": "Dataset4",
+      "filepath": "path_to_dataset4_GWAS_summary_stats.gz",
+      "col_chrom": "CHR",
+      "col_pos": "POS",
+      "col_ref": "REF",
+      "col_alt": "ALT",
+      "col_pval": "PVAL",
+      "col_beta": "BETA",
+      "col_sebeta": "SEBETA",
+      "col_af": "AF_ALT",
+      "pval_threshold": 0.000001
+    }
+  ],
+  "heterogeneity_tests": [
+    {
+      "tag": "meta1",
+      "compare": [
+        "Dataset1",
+        "Dataset2"
+      ]
+    },
+    {
+      "tag": "meta2",
+      "compare": [
+        "Dataset3",
+        "Dataset4"
+      ]
+    }
+  ]
+}

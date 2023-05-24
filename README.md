@@ -13,7 +13,7 @@ Tool to merge many GWAS summary statistics into one file ready to use in [MMP](h
    mkdir ~/mmpio
    cd ~/mmpio
    ```
-   
+
 2. Download mmp from the [release page](https://github.com/FINNGEN/mmpio/releases)
 
 3. Move it to the current mmpio directory you created in (1.):
@@ -21,7 +21,7 @@ Tool to merge many GWAS summary statistics into one file ready to use in [MMP](h
    ```bash
    mv ~/Downloads/mmp-macos-arm64.tar .
    ```
-   
+
 4. Extract the archive:
 
    ```bash
@@ -37,6 +37,8 @@ Still in the mmpio directory you created in (1.), do:
 
 2. Edit `config.json` with name, paths and columns for each of your datasets
 
+3. Specify groups of input files to be used for heterogeneity testing.
+
 
 **Run**
 
@@ -49,9 +51,9 @@ Still in the mmpio directory you created in (1.), do:
 ```
 
 > **⚠️ macOS Users** You may get a warning from macOS preventing you from running the binary:
-> 
+>
 > *"mmp" cannot be opened because the developer cannot be verified.*
-> 
+>
 > To bypass this you need to open the mmpio directory created in (1.) with Finder.
 > Then *Right-click* on the `mmp` binary file, then *Open*. (double-clicking to open will not work)
 

@@ -32,6 +32,16 @@ type SumStatConf struct {
 	PvalThreshold float64 `json:"pval_threshold"`
 }
 
+type HeterogeneityTest struct {
+	Tag     string   `json:"tag"`
+	Compare []string `json:"compare"`
+}
+
+type Conf struct {
+	Inputs             []SumStatConf       `json:"inputs"`
+	HeterogeneityTests []HeterogeneityTest `json:"heterogeneity_tests"`
+}
+
 type Cpra struct {
 	Chrom string
 	Pos   string
@@ -56,12 +66,12 @@ func main() {
 	conf := readConf("config.json")
 
 	fmt.Println("[1/3] Checking variant selection...")
-	selectedVariants := checkVariantSelection(conf)
+	selectedVariants := checkVariantSelection(conf.Inputs)
 
 	fmt.Println("[2/3] Getting variant statistics...")
-	statsVariants := findVariantStats(conf, selectedVariants)
+	statsVariants := findVariantStats(conf.Inputs, selectedVariants)
 
-	fmt.Printf("[3/3] Writing output to %s ...\n", OutputPath)
+	fmt.Printf("[3/3] Computing heterogeneity tests & writing output to %s ...\n", OutputPath)
 	writeMMPOutput(conf, statsVariants)
 }
 
@@ -71,15 +81,81 @@ func logCheck(message string, err error) {
 	}
 }
 
-func readConf(filePath string) []SumStatConf {
+func readConf(filePath string) Conf {
 	data, err := os.ReadFile(filePath)
 	logCheck("reading configuration file", err)
 
-	var conf []SumStatConf
+	var conf Conf
 	err = json.Unmarshal(data, &conf)
 	logCheck("parsing JSON conf", err)
 
+	// Validate JSON.
+	// Go will not complain if there is a missing field in our input configuration file,
+	// instead it will fill it with its default type value.
+	// Since our fields are all required we manually check that all fields were provided
+	// in the input configuration file.
+	if conf.Inputs == nil {
+		log.Fatal("Missing `inputs` field in the configuration file.")
+	}
+	if len(conf.Inputs) < 1 {
+		log.Fatal("No summary stat provided in the configuration file. Need at least 1.")
+	}
+	for ii, input := range conf.Inputs {
+		if input.Tag == "" {
+			logMissingCol("tag", ii, "inputs")
+		}
+		if input.Filepath == "" {
+			logMissingCol("filepath", ii, "inputs")
+		}
+		if input.ColChrom == "" {
+			logMissingCol("col_chrom", ii, "inputs")
+		}
+		if input.ColPos == "" {
+			logMissingCol("col_pos", ii, "inputs")
+		}
+		if input.ColRef == "" {
+			logMissingCol("col_ref", ii, "inputs")
+		}
+		if input.ColAlt == "" {
+			logMissingCol("col_alt", ii, "inputs")
+		}
+		if input.ColPval == "" {
+			logMissingCol("col_pval", ii, "inputs")
+		}
+		if input.ColBeta == "" {
+			logMissingCol("col_beta", ii, "inputs")
+		}
+		if input.ColSebeta == "" {
+			logMissingCol("col_sebeta", ii, "inputs")
+		}
+		if input.ColAf == "" {
+			logMissingCol("col_af", ii, "inputs")
+		}
+		if input.PvalThreshold == 0 {
+			logMissingCol("pval_threshold", ii, "inputs")
+		}
+	}
+
+	if conf.HeterogeneityTests == nil {
+		log.Fatal("Missing `heterogeneity_tests` field in the configuration file.")
+	}
+	for jj, heterogeneity_test := range conf.HeterogeneityTests {
+		if heterogeneity_test.Tag == "" {
+			logMissingCol("tag", jj, "heterogeneity_tests")
+		}
+		if heterogeneity_test.Compare == nil {
+			logMissingCol("compare", jj, "heterogeneity_tests")
+		}
+		if len(heterogeneity_test.Compare) < 2 {
+			log.Fatal("Need at least 2 GWAS to run heterogeneity test. Instead got: ", heterogeneity_test.Compare)
+		}
+	}
+
 	return conf
+}
+
+func logMissingCol(col_name string, element_index int, section string) {
+	log.Fatal("Missing `", col_name, "` field of element #", element_index, " in the `", section, "` section of the configuration file. Check config.json.sample for reference.")
 }
 
 func checkVariantSelection(conf []SumStatConf) map[Cpra]bool {
@@ -209,7 +285,7 @@ func sum(slice []float64) float64 {
 	return total
 }
 
-func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
+func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
 	var outRecords [][]string
 
 	statsCols := []string{"pval", "beta", "sebeta", "af"}
@@ -222,18 +298,23 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 
 	lenCpraFields := 4
 
-	for _, ssConf := range conf {
+	for _, ssConf := range conf.Inputs {
 		for _, suffix := range statsCols {
 			field := fmt.Sprintf("%s_%s", ssConf.Tag, suffix)
 			headerFields = append(headerFields, field)
 		}
 	}
-	headerFields = append(headerFields,
-		"meta_beta",
-		"meta_sebeta",
-		"meta_pval",
-		"meta_hetpval",
-	)
+
+	// Loop to add meta fields for each heterogeneity test
+	for _, test := range conf.HeterogeneityTests {
+		headerFields = append(headerFields,
+			fmt.Sprintf("%s_meta_beta", test.Tag),
+			fmt.Sprintf("%s_meta_sebeta", test.Tag),
+			fmt.Sprintf("%s_meta_pval", test.Tag),
+			fmt.Sprintf("%s_meta_hetpval", test.Tag),
+		)
+	}
+
 	outRecords = append(outRecords, headerFields)
 
 	for cpra, cpraStats := range statsVariants {
@@ -242,35 +323,10 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 		record[1] = cpra.Pos
 		record[2] = cpra.Ref
 		record[3] = cpra.Alt
-		// calculate meta stats here
-		var beta []float64
-		var sebeta []float64
-		for _, stats := range cpraStats {
-			b, err := strconv.ParseFloat(stats.Beta, 64)
-			logCheck("parsing beta as float", err)
-			s, err := strconv.ParseFloat(stats.Sebeta, 64)
-			logCheck("parsing sebeta as float", err)
-			beta = append(beta, b)
-			sebeta = append(sebeta, s)
-		}
-
-		invVar := make([]float64, len(sebeta))
-		for i := range invVar {
-			invVar[i] = 1 / (sebeta[i] * sebeta[i])
-		}
-		effInvVar := make([]float64, len(beta))
-		for i := range effInvVar {
-			effInvVar[i] = beta[i] * invVar[i]
-		}
-		metaBeta := sum(effInvVar) / sum(invVar)
-
-		metaSe := math.Sqrt(1 / sum(invVar))
-
-		metaPVal := 2 * distuv.UnitNormal.Survival(math.Abs(sum(effInvVar))/math.Sqrt(sum(invVar)))
 
 		for _, stats := range cpraStats {
 			var offset int
-			for ii, ssConf := range conf {
+			for ii, ssConf := range conf.Inputs {
 				if ssConf.Tag == stats.Tag {
 					offset = lenCpraFields + ii*len(statsCols)
 				}
@@ -279,8 +335,38 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			record[offset+1] = stats.Beta
 			record[offset+2] = stats.Sebeta
 			record[offset+3] = stats.Af
+		}
 
-			// calculate metaHetPVal here
+		// Calculate meta stats here
+		for _, test := range conf.HeterogeneityTests {
+			var beta []float64
+			var sebeta []float64
+			for _, stats := range cpraStats {
+				if contains(test.Compare, stats.Tag) {
+					b, err := strconv.ParseFloat(stats.Beta, 64)
+					logCheck("parsing beta as float", err)
+					s, err := strconv.ParseFloat(stats.Sebeta, 64)
+					logCheck("parsing sebeta as float", err)
+					beta = append(beta, b)
+					sebeta = append(sebeta, s)
+				}
+			}
+
+			invVar := make([]float64, len(sebeta))
+			for i := range invVar {
+				invVar[i] = 1 / (sebeta[i] * sebeta[i])
+			}
+			effInvVar := make([]float64, len(beta))
+			for i := range effInvVar {
+				effInvVar[i] = beta[i] * invVar[i]
+			}
+			metaBeta := sum(effInvVar) / sum(invVar)
+
+			metaSe := math.Sqrt(1 / sum(invVar))
+
+			metaPVal := 2 * distuv.UnitNormal.Survival(math.Abs(sum(effInvVar))/math.Sqrt(sum(invVar)))
+
+			// Calculate metaHetPVal here
 			var betaDev []float64
 			for i := range beta {
 				betaDev = append(betaDev, invVar[i]*(beta[i]-metaBeta)*(beta[i]-metaBeta))
@@ -291,11 +377,13 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 				Src: nil,
 			}.CDF(sum(betaDev))
 
-			record[lenCpraFields+len(conf)*len(statsCols)+0] = fmt.Sprintf("%f", metaBeta)
-			record[lenCpraFields+len(conf)*len(statsCols)+1] = fmt.Sprintf("%f", metaSe)
-			record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%e", metaPVal)
-			record[lenCpraFields+len(conf)*len(statsCols)+3] = fmt.Sprintf("%e", metaHetPVal)
+			offset := lenCpraFields + len(conf.Inputs)*len(statsCols) + indexOfTest(test.Tag, conf.HeterogeneityTests)*len(statsCols)
+			record[offset+0] = fmt.Sprintf("%f", metaBeta)
+			record[offset+1] = fmt.Sprintf("%f", metaSe)
+			record[offset+2] = fmt.Sprintf("%e", metaPVal)
+			record[offset+3] = fmt.Sprintf("%e", metaHetPVal)
 		}
+
 		outRecords = append(outRecords, record)
 	}
 
@@ -308,6 +396,24 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 	tsvWriter.WriteAll(outRecords)
 	err = tsvWriter.Error()
 	logCheck("writing TSV output", err)
+}
+
+func contains(slice []string, item string) bool {
+	for _, elem := range slice {
+		if elem == item {
+			return true
+		}
+	}
+	return false
+}
+
+func indexOfTest(tag string, tests []HeterogeneityTest) int {
+	for i, test := range tests {
+		if test.Tag == tag {
+			return i
+		}
+	}
+	return -1
 }
 
 func readGzTsv(ssConf SumStatConf, ch chan<- CpraStats) {
