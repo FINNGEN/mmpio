@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"sync"
@@ -24,6 +25,7 @@ type SumStatConf struct {
 	ColAlt        string  `json:"col_alt"`
 	ColPval       string  `json:"col_pval"`
 	ColBeta       string  `json:"col_beta"`
+	ColSebeta     string  `json:"col_sebeta"`
 	ColAf         string  `json:"col_af"`
 	PvalThreshold float64 `json:"pval_threshold"`
 }
@@ -36,10 +38,12 @@ type Cpra struct {
 }
 
 type Stats struct {
-	Tag  string
-	Pval string
-	Beta string
-	Af   string
+	Tag           string
+	Pval          string
+	Beta          string
+	Sebeta        string
+	Af            string
+	Heterogeneity float64
 }
 
 type CpraStats struct {
@@ -182,13 +186,16 @@ func parseCpra(record []string, fields map[string]int, ssConf SumStatConf) Cpra 
 func parseStats(record []string, fields map[string]int, ssConf SumStatConf) Stats {
 	pval := record[fields[ssConf.ColPval]]
 	beta := record[fields[ssConf.ColBeta]]
+	sebeta := record[fields[ssConf.ColSebeta]]
 	af := record[fields[ssConf.ColAf]]
 
 	stats := Stats{
 		ssConf.Tag,
 		pval,
 		beta,
+		sebeta,
 		af,
+		0, //placeholder for heterogeneity
 	}
 
 	return stats
@@ -197,7 +204,7 @@ func parseStats(record []string, fields map[string]int, ssConf SumStatConf) Stat
 func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 	var outRecords [][]string
 
-	statsCols := []string{"pval", "beta", "af"}
+	statsCols := []string{"pval", "beta", "sebeta", "af", "heterogeneity"}
 	headerFields := []string{
 		"chrom",
 		"pos",
@@ -221,6 +228,17 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 		record[2] = cpra.Ref
 		record[3] = cpra.Alt
 
+		// calculate heterogeneity here
+		var sum float64
+		for _, stats := range cpraStats {
+			beta, err := strconv.ParseFloat(stats.Beta, 64)
+			logCheck("parsing beta as float", err)
+			sebeta, err := strconv.ParseFloat(stats.Sebeta, 64)
+			logCheck("parsing sebeta as float", err)
+			sum += (beta * beta) / (sebeta * sebeta)
+		}
+		heterogeneity := math.Sqrt(sum)
+
 		for _, stats := range cpraStats {
 			var offset int
 			for ii, ssConf := range conf {
@@ -230,7 +248,10 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			}
 			record[offset+0] = stats.Pval
 			record[offset+1] = stats.Beta
-			record[offset+2] = stats.Af
+			record[offset+2] = stats.Sebeta
+			record[offset+3] = stats.Af
+			record[offset+4] = fmt.Sprintf("%f", heterogeneity) //add heterogeneity value to record
+
 		}
 		outRecords = append(outRecords, record)
 	}
