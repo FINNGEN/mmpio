@@ -8,6 +8,7 @@
     "col_alt": "alt",
     "col_pval": "pval",
     "col_beta": "beta",
+    "col_sebeta": "sebeta",
     "col_af": "af_alt",
     "pval_threshold": 1e-06
   },
@@ -20,6 +21,7 @@
     "col_alt": "ALT",
     "col_pval": "PVAL",
     "col_beta": "BETA",
+    "col_sebeta": "SE",
     "col_af": "AF_ALT",
     "pval_threshold": 1e-06
   }
