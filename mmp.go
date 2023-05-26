@@ -293,8 +293,8 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 
 			record[lenCpraFields+len(conf)*len(statsCols)+0] = fmt.Sprintf("%f", metaBeta)
 			record[lenCpraFields+len(conf)*len(statsCols)+1] = fmt.Sprintf("%f", metaSe)
-			record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%f", metaPVal)
-			record[lenCpraFields+len(conf)*len(statsCols)+3] = fmt.Sprintf("%f", metaHetPVal)
+			record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%e", metaPVal)
+			record[lenCpraFields+len(conf)*len(statsCols)+3] = fmt.Sprintf("%e", metaHetPVal)
 		}
 		outRecords = append(outRecords, record)
 	}
