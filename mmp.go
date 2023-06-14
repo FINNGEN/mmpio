@@ -16,7 +16,7 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-const OutputPath = "mmp.tsv"
+const OutputPath = "mmp_bones.tsv"
 
 type SumStatConf struct {
 	Tag           string  `json:"tag"`
@@ -228,13 +228,21 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			headerFields = append(headerFields, field)
 		}
 	}
-	headerFields = append(headerFields,
-		"meta_beta",
-		"meta_sebeta",
-		"meta_pval",
-		"meta_hetpval",
-	)
+
+	for i, ssConf1 := range conf {
+		for j, ssConf2 := range conf {
+			if i < j {
+				field := fmt.Sprintf("%s_%s_hetpval", ssConf1.Tag, ssConf2.Tag)
+				headerFields = append(headerFields, field)
+			}
+		}
+	}
 	outRecords = append(outRecords, headerFields)
+
+	fields := make(map[string]int)
+	for ii, field := range headerFields {
+		fields[field] = ii
+	}
 
 	for cpra, cpraStats := range statsVariants {
 		record := make([]string, len(headerFields))
@@ -281,21 +289,31 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			record[offset+3] = stats.Af
 
 			// calculate metaHetPVal here
-			var betaDev []float64
-			for i := range beta {
-				betaDev = append(betaDev, invVar[i]*(beta[i]-metaBeta)*(beta[i]-metaBeta))
+			for i, ssConf1 := range conf {
+				for j, ssConf2 := range conf {
+					if i < j {
+						var betaDev []float64
+						for k := range beta {
+							if cpraStats[k].Tag == ssConf1.Tag || cpraStats[k].Tag == ssConf2.Tag {
+								betaDev = append(betaDev, invVar[k]*(beta[k]-metaBeta)*(beta[k]-metaBeta))
+							}
+						}
+
+						degreesOFFreedom := 1.0
+						metaHetPVal := 1 - distuv.ChiSquared{
+							K:   degreesOFFreedom,
+							Src: nil,
+						}.CDF(sum(betaDev))
+
+						field := fmt.Sprintf("%s_%s_hetpval", ssConf1.Tag, ssConf2.Tag)
+						record[fields[field]] = fmt.Sprintf("%e", metaHetPVal)
+					}
+				}
 			}
-
-			metaHetPVal := 1 - distuv.ChiSquared{
-				K:   1,
-				Src: nil,
-			}.CDF(sum(betaDev))
-
-			record[lenCpraFields+len(conf)*len(statsCols)+0] = fmt.Sprintf("%f", metaBeta)
-			record[lenCpraFields+len(conf)*len(statsCols)+1] = fmt.Sprintf("%f", metaSe)
-			record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%e", metaPVal)
-			record[lenCpraFields+len(conf)*len(statsCols)+3] = fmt.Sprintf("%e", metaHetPVal)
 		}
+		record[lenCpraFields+len(conf)*len(statsCols)+0] = fmt.Sprintf("%f", metaBeta)
+		record[lenCpraFields+len(conf)*len(statsCols)+1] = fmt.Sprintf("%f", metaSe)
+		record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%e", metaPVal)
 		outRecords = append(outRecords, record)
 	}
 
@@ -308,8 +326,17 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 	tsvWriter.WriteAll(outRecords)
 	err = tsvWriter.Error()
 	logCheck("writing TSV output", err)
-}
 
+	for _, ssConf := range conf {
+		for _, suffix := range statsCols {
+			field := fmt.Sprintf("%s_%s", ssConf.Tag, suffix)
+			headerFields = append(headerFields, field)
+		}
+	}
+
+	outRecords = append(outRecords, headerFields)
+
+}
 func readGzTsv(ssConf SumStatConf, ch chan<- CpraStats) {
 	// Open gzip file for reading
 	fReader, err := os.Open(ssConf.Filepath)
