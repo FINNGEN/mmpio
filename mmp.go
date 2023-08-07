@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"sync"
+
+	"gonum.org/v1/gonum/stat/distuv"
 )
 
 const OutputPath = "mmp.tsv"
@@ -24,6 +27,7 @@ type SumStatConf struct {
 	ColAlt        string  `json:"col_alt"`
 	ColPval       string  `json:"col_pval"`
 	ColBeta       string  `json:"col_beta"`
+	ColSebeta     string  `json:"col_sebeta"`
 	ColAf         string  `json:"col_af"`
 	PvalThreshold float64 `json:"pval_threshold"`
 }
@@ -36,10 +40,11 @@ type Cpra struct {
 }
 
 type Stats struct {
-	Tag  string
-	Pval string
-	Beta string
-	Af   string
+	Tag    string
+	Pval   string
+	Beta   string
+	Sebeta string
+	Af     string
 }
 
 type CpraStats struct {
@@ -182,28 +187,39 @@ func parseCpra(record []string, fields map[string]int, ssConf SumStatConf) Cpra 
 func parseStats(record []string, fields map[string]int, ssConf SumStatConf) Stats {
 	pval := record[fields[ssConf.ColPval]]
 	beta := record[fields[ssConf.ColBeta]]
+	sebeta := record[fields[ssConf.ColSebeta]]
 	af := record[fields[ssConf.ColAf]]
 
 	stats := Stats{
 		ssConf.Tag,
 		pval,
 		beta,
+		sebeta,
 		af,
 	}
 
 	return stats
 }
 
+func sum(slice []float64) float64 {
+	total := 0.0
+	for _, v := range slice {
+		total += v
+	}
+	return total
+}
+
 func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 	var outRecords [][]string
 
-	statsCols := []string{"pval", "beta", "af"}
+	statsCols := []string{"pval", "beta", "sebeta", "af"}
 	headerFields := []string{
 		"chrom",
 		"pos",
 		"ref",
 		"alt",
 	}
+
 	lenCpraFields := 4
 
 	for _, ssConf := range conf {
@@ -212,6 +228,12 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			headerFields = append(headerFields, field)
 		}
 	}
+	headerFields = append(headerFields,
+		"meta_beta",
+		"meta_sebeta",
+		"meta_pval",
+		"meta_hetpval",
+	)
 	outRecords = append(outRecords, headerFields)
 
 	for cpra, cpraStats := range statsVariants {
@@ -220,6 +242,31 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 		record[1] = cpra.Pos
 		record[2] = cpra.Ref
 		record[3] = cpra.Alt
+		// calculate meta stats here
+		var beta []float64
+		var sebeta []float64
+		for _, stats := range cpraStats {
+			b, err := strconv.ParseFloat(stats.Beta, 64)
+			logCheck("parsing beta as float", err)
+			s, err := strconv.ParseFloat(stats.Sebeta, 64)
+			logCheck("parsing sebeta as float", err)
+			beta = append(beta, b)
+			sebeta = append(sebeta, s)
+		}
+
+		invVar := make([]float64, len(sebeta))
+		for i := range invVar {
+			invVar[i] = 1 / (sebeta[i] * sebeta[i])
+		}
+		effInvVar := make([]float64, len(beta))
+		for i := range effInvVar {
+			effInvVar[i] = beta[i] * invVar[i]
+		}
+		metaBeta := sum(effInvVar) / sum(invVar)
+
+		metaSe := math.Sqrt(1 / sum(invVar))
+
+		metaPVal := 2 * distuv.UnitNormal.Survival(math.Abs(sum(effInvVar))/math.Sqrt(sum(invVar)))
 
 		for _, stats := range cpraStats {
 			var offset int
@@ -230,7 +277,24 @@ func writeMMPOutput(conf []SumStatConf, statsVariants map[Cpra][]Stats) {
 			}
 			record[offset+0] = stats.Pval
 			record[offset+1] = stats.Beta
-			record[offset+2] = stats.Af
+			record[offset+2] = stats.Sebeta
+			record[offset+3] = stats.Af
+
+			// calculate metaHetPVal here
+			var betaDev []float64
+			for i := range beta {
+				betaDev = append(betaDev, invVar[i]*(beta[i]-metaBeta)*(beta[i]-metaBeta))
+			}
+
+			metaHetPVal := 1 - distuv.ChiSquared{
+				K:   1,
+				Src: nil,
+			}.CDF(sum(betaDev))
+
+			record[lenCpraFields+len(conf)*len(statsCols)+0] = fmt.Sprintf("%f", metaBeta)
+			record[lenCpraFields+len(conf)*len(statsCols)+1] = fmt.Sprintf("%f", metaSe)
+			record[lenCpraFields+len(conf)*len(statsCols)+2] = fmt.Sprintf("%e", metaPVal)
+			record[lenCpraFields+len(conf)*len(statsCols)+3] = fmt.Sprintf("%e", metaHetPVal)
 		}
 		outRecords = append(outRecords, record)
 	}
