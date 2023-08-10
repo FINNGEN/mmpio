@@ -37,6 +37,8 @@ Still in the mmpio directory you created in (1.), do:
 
 2. Edit `config.json` with name, paths and columns for each of your datasets
 
+3. Specify groups of input files to be used for heterogeneity testing. 
+
 
 **Run**
 
