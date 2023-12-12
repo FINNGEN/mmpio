@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -16,7 +17,8 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-const OutputPath = "mmp.tsv"
+var outputPath string
+var configPath string
 
 type SumStatConf struct {
 	Tag           string  `json:"tag"`
@@ -63,7 +65,7 @@ type CpraStats struct {
 }
 
 func main() {
-	conf := readConf("config.json")
+	conf := readConf(configPath)
 
 	fmt.Println("[1/3] Checking variant selection...")
 	selectedVariants := checkVariantSelection(conf.Inputs)
@@ -71,8 +73,14 @@ func main() {
 	fmt.Println("[2/3] Getting variant statistics...")
 	statsVariants := findVariantStats(conf.Inputs, selectedVariants)
 
-	fmt.Printf("[3/3] Computing heterogeneity tests & writing output to %s ...\n", OutputPath)
+	fmt.Printf("[3/3] Computing heterogeneity tests & writing output to %s ...\n", outputPath)
 	writeMMPOutput(conf, statsVariants)
+}
+
+func init() {
+	flag.StringVar(&outputPath, "output", "mmp.tsv", "Specify the output path (TSV)")
+	flag.StringVar(&configPath, "config", "config.json", "Specify the configuration path (JSON)")
+	flag.Parse()
 }
 
 func logCheck(message string, err error) {
@@ -387,7 +395,7 @@ func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
 		outRecords = append(outRecords, record)
 	}
 
-	outFile, err := os.Create(OutputPath)
+	outFile, err := os.Create(outputPath)
 	logCheck("creating output file", err)
 	defer outFile.Close()
 
