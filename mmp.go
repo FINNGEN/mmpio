@@ -192,7 +192,7 @@ func streamVariants(ssConf SumStatConf, ch chan<- Cpra) {
 
 	for rec := range chRows {
 		pvalUnparsed := rec.Stats.Pval
-		pval, err := strconv.ParseFloat(pvalUnparsed, 64)
+		pval, err := parseFloat64NaN(pvalUnparsed)
 		logCheck("parsing p-value as float", err)
 
 		if pval < ssConf.PvalThreshold {
@@ -343,9 +343,9 @@ func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
 			var sebeta []float64
 			for _, stats := range cpraStats {
 				if contains(test.Compare, stats.Tag) {
-					b, err := strconv.ParseFloat(stats.Beta, 64)
+					b, err := parseFloat64NaN(stats.Beta)
 					logCheck("parsing beta as float", err)
-					s, err := strconv.ParseFloat(stats.Sebeta, 64)
+					s, err := parseFloat64NaN(stats.Sebeta)
 					logCheck("parsing sebeta as float", err)
 					beta = append(beta, b)
 					sebeta = append(sebeta, s)
@@ -455,4 +455,14 @@ func readGzTsv(ssConf SumStatConf, ch chan<- CpraStats) {
 	}
 
 	close(ch)
+}
+
+func parseFloat64NaN(input string) (float64, error) {
+	const parseableNaN = "NaN"
+
+	if input == "NA" {
+		return strconv.ParseFloat(parseableNaN, 64)
+	} else {
+		return strconv.ParseFloat(input, 64)
+	}
 }
