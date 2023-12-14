@@ -260,26 +260,61 @@ func streamStats(ssConf SumStatConf, selectedVariants map[Cpra]bool, ch chan<- C
 }
 
 func parseCpra(record []string, fields map[string]int, ssConf SumStatConf) Cpra {
+	fieldChrom, found := fields[ssConf.ColChrom]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColChrom, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldPos, found := fields[ssConf.ColPos]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColPos, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldRef, found := fields[ssConf.ColRef]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColRef, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldAlt, found := fields[ssConf.ColAlt]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColAlt, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
 	return Cpra{
-		record[fields[ssConf.ColChrom]],
-		record[fields[ssConf.ColPos]],
-		record[fields[ssConf.ColRef]],
-		record[fields[ssConf.ColAlt]],
+		record[fieldChrom],
+		record[fieldPos],
+		record[fieldRef],
+		record[fieldAlt],
 	}
 }
 
 func parseStats(record []string, fields map[string]int, ssConf SumStatConf) Stats {
-	pval := record[fields[ssConf.ColPval]]
-	beta := record[fields[ssConf.ColBeta]]
-	sebeta := record[fields[ssConf.ColSebeta]]
-	af := record[fields[ssConf.ColAf]]
+	fieldPval, found := fields[ssConf.ColPval]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColPval, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldBeta, found := fields[ssConf.ColBeta]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColBeta, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldSebeta, found := fields[ssConf.ColSebeta]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColSebeta, "` in header of input file `", ssConf.Filepath, "`.")
+	}
+
+	fieldAf, found := fields[ssConf.ColAf]
+	if !found {
+		log.Fatal("Could not find column `", ssConf.ColAf, "` in header of input file `", ssConf.Filepath, "`.")
+	}
 
 	stats := Stats{
 		ssConf.Tag,
-		pval,
-		beta,
-		sebeta,
-		af,
+		record[fieldPval],
+		record[fieldBeta],
+		record[fieldSebeta],
+		record[fieldAf],
 	}
 
 	return stats
