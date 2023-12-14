@@ -53,11 +53,12 @@ Still in the mmpio directory you created in (1.), do:
 This outputs a `mmp.tsv` file ready for upload on [MMP](https://geneviz.aalto.fi/MMP/dashboard/).
 
 
-> **⚠️ macOS Users** You may get a warning from macOS preventing you from running the binary:
+> [!NOTE]
+> **macOS users:** You may get a warning from macOS preventing you from running the binary:
 >
-> *"mmp" cannot be opened because the developer cannot be verified.*
+> > "mmp" cannot be opened because the developer cannot be verified.
 >
-> To bypass this you need to :
+> To bypass this you need to:
 > 1. Open the mmpio directory created in (1.) with Finder.
 > 2. Then *Right-click* on the `mmp` binary file, then *Open*. (double-clicking to open will not work)
 > 3. Close the terminal window that opened.
