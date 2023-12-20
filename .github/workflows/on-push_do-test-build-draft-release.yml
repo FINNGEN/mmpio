@@ -1,0 +1,160 @@
+name: Test, Build, Make draft release
+
+on: push
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: src/go.sum
+
+      - name: Test
+        run: go test -C src -v ./...
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: src/go.sum
+
+      - name: Build (linux x86-64)
+        run: >
+          mkdir artifact-linux-x86-64
+          && env GOOS=linux GOARCH=amd64 go build -C src -o ../artifact-linux-x86-64/mmpio -v ./...
+          && cp config/config.json.sample artifact-linux-x86-64
+          && tar -C artifact-linux-x86-64 -cvf mmpio-linux-x86-64.tar mmpio config.json.sample
+
+      - name: Build (macOS x86-64)
+        run: >
+          mkdir artifact-macos-intel
+          && env GOOS=darwin GOARCH=amd64 go build -C src -o ../artifact-macos-intel/mmpio -v ./...
+          && cp config/config.json.sample artifact-macos-intel
+          && tar -C artifact-macos-intel -cvf mmpio-macos-intel.tar mmpio config.json.sample
+
+      - name: Build (macOS ARM)
+        run: >
+          mkdir artifact-macos-arm64
+          && env GOOS=darwin GOARCH=arm64 go build -C src -o ../artifact-macos-arm64/mmpio -v ./...
+          && cp config/config.json.sample artifact-macos-arm64
+          && tar -C artifact-macos-arm64 -cvf mmpio-macos-arm64.tar mmpio config.json.sample
+
+      - name: Build (Windows x86-64)
+        run: >
+          mkdir artifact-windows-x86-64
+          && env GOOS=windows GOARCH=amd64 go build -C src -o ../artifact-windows-x86-64/mmpio -v ./...
+          && cp config/config.json.sample artifact-windows-x86-64
+          && tar -C artifact-windows-x86-64 -cvf mmpio-windows-x86-64.tar mmpio config.json.sample
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mmpio-linux-x86-64.tar
+          path: mmpio-linux-x86-64.tar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mmpio-macos-intel.tar
+          path: mmpio-macos-intel.tar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mmpio-macos-arm64.tar
+          path: mmpio-macos-arm64.tar
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mmpio-windows-x86-64.tar
+          path: mmpio-windows-x86-64.tar
+
+  make-draft-release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Create draft release
+        run: >
+          gh api
+          --method POST
+          -H "Accept: application/vnd.github+json"
+          -H "X-GitHub-Api-Version: 2022-11-28"
+          /repos/FINNGEN/mmpio/releases
+          -f tag_name='auto-release-${{ github.run_id }}'
+          -f name='${{ github.run_id }}'
+          -f body='Description of the release'
+          -F draft=true
+          | tee response.json
+
+      - name: Get release ID
+        run: |
+          echo "this_release_id=$(jq .id response.json)" >> "$GITHUB_ENV"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mmpio-linux-x86-64.tar
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mmpio-macos-intel.tar
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mmpio-macos-arm64.tar
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: mmpio-windows-x86-64.tar
+
+      - name: Prepare release body text
+        run: >
+          echo "**Downloads:**" > release-body.md
+
+      # NOTE: Vincent 2023-11-21
+      # For some unknown reason, it can't make this step work with 'gh api'
+      # as I get an "invalid key" error.
+      # My guess is that the documentation is wrong for using gh api to
+      # upload assets to a release.
+      # https://docs.github.com/en/rest/releases/assets?apiVersion=2022-11-28#upload-a-release-asset
+      - name: Attach artifacts to release
+        run: >
+          for artifact_file in mmpio-*.tar;
+          do
+          curl -L
+          -X POST
+          -H "Accept: application/vnd.github+json"
+          -H "Authorization: Bearer ${GH_TOKEN}"
+          -H "X-GitHub-Api-Version: 2022-11-28"
+          -H "Content-Type: application/octet-stream"
+          "https://uploads.github.com/repos/FINNGEN/mmpio/releases/${this_release_id}/assets?name=${artifact_file}"
+          --data-binary "@${artifact_file}"
+          | jq --raw-output .browser_download_url > ${artifact_file}.txt ;
+          done
+
+      - name: Finalize release body text
+        run: >
+          echo "- [Linux x86-64]($(cat mmpio-linux-x86-64.tar.txt))" >> release-body.md
+          && echo "- [macOS (Intel)]($(cat mmpio-macos-intel.tar.txt))" >> release-body.md
+          && echo "- [macOS (M series, ARM)]($(cat mmpio-macos-arm64.tar.txt))" >> release-body.md
+          && echo "- [Windows x86-64]($(cat mmpio-windows-x86-64.tar.txt))" >> release-body.md
+          && cat *.txt
+          && cat release-body.md
+
+      - name: Update release body
+        run: >
+          gh api
+          --method PATCH
+          -H "Accept: application/vnd.github+json"
+          -H "X-GitHub-Api-Version: 2022-11-28"
+          /repos/FINNGEN/mmpio/releases/${this_release_id}
+          -f body="$(cat release-body.md)"
