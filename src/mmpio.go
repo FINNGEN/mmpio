@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"gonum.org/v1/gonum/stat/distuv"
@@ -32,6 +33,7 @@ type SumStatConf struct {
 	ColSebeta     string  `json:"col_sebeta"`
 	ColAf         string  `json:"col_af"`
 	PvalThreshold float64 `json:"pval_threshold"`
+	FmFilepath    string  `json:"fine_mapping_filepath"`
 }
 
 type HeterogeneityTest struct {
@@ -64,17 +66,44 @@ type CpraStats struct {
 	Stats Stats
 }
 
+type FineMappingStats struct {
+	Tag string
+	Pip string
+	Cs  string
+}
+
+type CpraFineMappingStats struct {
+	Cpra             Cpra
+	FineMappingStats FineMappingStats
+}
+
+type CombinedStats struct {
+	Tag    string
+	Pval   string
+	Beta   string
+	Sebeta string
+	Af     string
+	Pip    string
+	Cs     string
+}
+
 func main() {
 	conf := readConf(configPath)
 
-	fmt.Println("[1/3] Checking variant selection...")
+	fmt.Println("[1/5] Checking variant selection...")
 	selectedVariants := checkVariantSelection(conf.Inputs)
 
-	fmt.Println("[2/3] Getting variant statistics...")
+	fmt.Println("[2/5] Getting variant statistics...")
 	statsVariants := findVariantStats(conf.Inputs, selectedVariants)
 
-	fmt.Printf("[3/3] Computing heterogeneity tests & writing output to %s ...\n", outputPath)
-	writeMMPOutput(conf, statsVariants)
+	fmt.Println("[3/5] Getting variant fine mapping statistics...")
+	fmstatsVariants := findVariantFineMappingStats(conf.Inputs, selectedVariants)
+
+	fmt.Println("[4/5] Combining variant GWAS statistics and fine mapping statistics...")
+	combinedStatsVariants := combineStatsAndFmStats(statsVariants, fmstatsVariants)
+
+	fmt.Printf("[5/5] Computing heterogeneity tests & writing output to %s ...\n", outputPath)
+	writeMMPOutput(conf, combinedStatsVariants)
 }
 
 func init() {
@@ -141,6 +170,9 @@ func readConf(filePath string) Conf {
 		}
 		if input.PvalThreshold == 0 {
 			logMissingCol("pval_threshold", ii, "inputs")
+		} // new added: check fine mapping file path
+		if input.FmFilepath == "" {
+			logMissingCol("fine_mapping_filepath", ii, "inputs")
 		}
 	}
 
@@ -328,10 +360,10 @@ func sum(slice []float64) float64 {
 	return total
 }
 
-func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
+func writeMMPOutput(conf Conf, combinedStatsVariants map[Cpra][]CombinedStats) {
 	var outRecords [][]string
 
-	statsCols := []string{"pval", "beta", "sebeta", "af"}
+	statsCols := []string{"pval", "beta", "sebeta", "af", "pip", "cs"}
 	headerFields := []string{
 		"chrom",
 		"pos",
@@ -360,7 +392,7 @@ func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
 
 	outRecords = append(outRecords, headerFields)
 
-	for cpra, cpraStats := range statsVariants {
+	for cpra, cpraStats := range combinedStatsVariants {
 		record := make([]string, len(headerFields))
 		record[0] = cpra.Chrom
 		record[1] = cpra.Pos
@@ -378,6 +410,8 @@ func writeMMPOutput(conf Conf, statsVariants map[Cpra][]Stats) {
 			record[offset+1] = stats.Beta
 			record[offset+2] = stats.Sebeta
 			record[offset+3] = stats.Af
+			record[offset+4] = stats.Pip
+			record[offset+5] = stats.Cs
 		}
 
 		// Calculate meta stats here
@@ -508,4 +542,170 @@ func parseFloat64NaN(input string) (float64, error) {
 	} else {
 		return strconv.ParseFloat(input, 64)
 	}
+}
+
+func findVariantFineMappingStats(conf []SumStatConf, selectedVariants map[Cpra]bool) map[Cpra][]FineMappingStats {
+	fmstats := make(map[Cpra][]FineMappingStats)
+
+	var wg sync.WaitGroup
+	ch := make(chan CpraFineMappingStats)
+
+	for _, ssConf := range conf {
+		wg.Add(1)
+		go func(ssConf SumStatConf) {
+			defer wg.Done()
+			streamFmStats(ssConf, selectedVariants, ch)
+		}(ssConf)
+	}
+
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for variant := range ch {
+		multiStats, found := fmstats[variant.Cpra]
+		if !found {
+			var multiStats = []FineMappingStats{variant.FineMappingStats}
+			fmstats[variant.Cpra] = multiStats
+		} else {
+			multiStats = append(multiStats, variant.FineMappingStats)
+			fmstats[variant.Cpra] = multiStats
+		}
+	}
+
+	return fmstats
+}
+
+func streamFmStats(ssConf SumStatConf, selectedVariants map[Cpra]bool, ch chan<- CpraFineMappingStats) {
+	fmt.Printf("- processing %s\n", ssConf.Tag)
+
+	chRows := make(chan CpraFineMappingStats)
+	go readTsv(ssConf, chRows)
+
+	for rec := range chRows {
+		if _, found := selectedVariants[rec.Cpra]; found {
+			ch <- rec
+		}
+	}
+
+	fmt.Printf("* done %s\n", ssConf.Tag)
+}
+
+func readTsv(ssConf SumStatConf, ch chan<- CpraFineMappingStats) {
+	// Open file for reading
+	fReader, err := os.Open(ssConf.FmFilepath)
+	logCheck("opening file", err)
+	defer fReader.Close()
+
+	// Parse as TSV
+	tsvReader := csv.NewReader(fReader)
+	tsvReader.Comma = '\t'
+
+	// Keep track of the TSV header
+	rec, err := tsvReader.Read()
+	logCheck("parsing TSV header", err)
+	fields := make(map[string]int)
+	for ii, field := range rec {
+		fields[field] = ii
+	}
+
+	// Emit the TSV rows
+	for {
+		rec, err = tsvReader.Read()
+
+		// Can't read data if end of file or parsing error
+		if err == io.EOF {
+			break
+		}
+		logCheck("parsing TSV row", err)
+
+		// Emit the data if valid
+		fmcpra := parseFmCpra(rec, fields)
+		fmstats := parseFmStats(rec, fields, ssConf)
+		ch <- CpraFineMappingStats{fmcpra, fmstats}
+	}
+
+	close(ch)
+}
+
+func parseFmCpra(record []string, fields map[string]int) Cpra {
+	chromosomeWithPrefix := record[fields["chromosome"]]
+	// Remove "chr" prefix
+	chromosome := strings.TrimPrefix(chromosomeWithPrefix, "chr")
+	position := record[fields["position"]]
+	allele1 := record[fields["allele1"]]
+	allele2 := record[fields["allele2"]]
+
+	return Cpra{
+		Chrom: chromosome,
+		Pos:   position,
+		Ref:   allele1,
+		Alt:   allele2,
+	}
+}
+
+func parseFmStats(record []string, fields map[string]int, ssConf SumStatConf) FineMappingStats {
+	Pip := record[fields["cs_specific_prob"]]
+	Cs := record[fields["cs"]]
+
+	fmstats := FineMappingStats{
+		ssConf.Tag,
+		Pip,
+		Cs,
+	}
+
+	return fmstats
+}
+
+func combineStatsAndFmStats(stats map[Cpra][]Stats, fmstats map[Cpra][]FineMappingStats) map[Cpra][]CombinedStats {
+	combinedStatsVariants := make(map[Cpra][]CombinedStats)
+
+	for cpra, statList := range stats {
+		fmStatList, found := fmstats[cpra]
+		if found {
+			combinedList := combineStatsAndFmStat(statList, fmStatList)
+			combinedStatsVariants[cpra] = combinedList
+		}
+	}
+
+	return combinedStatsVariants
+}
+
+func combineStatsAndFmStat(statsList []Stats, fmStatList []FineMappingStats) []CombinedStats {
+	combinedList := make([]CombinedStats, 0)
+
+	for _, stat := range statsList {
+		// Find matching FineMappingStats based on Tag
+		var matchingFmStat FineMappingStats
+		found := false
+		for _, fmStat := range fmStatList {
+			if fmStat.Tag == stat.Tag {
+				matchingFmStat = fmStat
+				found = true
+				break
+			}
+		}
+
+		// Combine Stats and FineMappingStats
+		combined := CombinedStats{
+			Tag:    stat.Tag,
+			Pval:   stat.Pval,
+			Beta:   stat.Beta,
+			Sebeta: stat.Sebeta,
+			Af:     stat.Af,
+			Pip:    matchingFmStat.Pip,
+			Cs:     matchingFmStat.Cs,
+		}
+
+		if !found {
+			// Handle the case when no matching FineMappingStat is found
+			combined.Pip = "NA" // or any other default value
+			combined.Cs = "NA"  // or any other default value
+		}
+
+		combinedList = append(combinedList, combined)
+	}
+
+	return combinedList
 }

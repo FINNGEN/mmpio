@@ -11,7 +11,8 @@
       "col_beta": "beta",
       "col_sebeta": "sebeta",
       "col_af": "af_alt",
-      "pval_threshold": 0.000001
+      "pval_threshold": 0.000001,
+      "fine_mapping_filepath": null
     },
     {
       "tag": "Dataset2",
@@ -24,7 +25,8 @@
       "col_beta": "BETA",
       "col_sebeta": "SEBETA",
       "col_af": "AF_ALT",
-      "pval_threshold": 0.000001
+      "pval_threshold": 0.000001,
+      "fine_mapping_filepath": null
     },
     {
       "tag": "Dataset3",
@@ -37,20 +39,8 @@
       "col_beta": "beta",
       "col_sebeta": "sebeta",
       "col_af": "af_alt",
-      "pval_threshold": 0.000001
-    },
-    {
-      "tag": "Dataset4",
-      "filepath": "path_to_dataset4_GWAS_summary_stats.gz",
-      "col_chrom": "CHR",
-      "col_pos": "POS",
-      "col_ref": "REF",
-      "col_alt": "ALT",
-      "col_pval": "PVAL",
-      "col_beta": "BETA",
-      "col_sebeta": "SEBETA",
-      "col_af": "AF_ALT",
-      "pval_threshold": 0.000001
+      "pval_threshold": 0.000001,
+      "fine_mapping_filepath": null
     }
   ],
   "heterogeneity_tests": [
@@ -64,8 +54,8 @@
     {
       "tag": "meta2",
       "compare": [
-        "Dataset3",
-        "Dataset4"
+        "Dataset2",
+        "Dataset3"
       ]
     }
   ]
