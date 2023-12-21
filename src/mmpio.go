@@ -170,9 +170,6 @@ func readConf(filePath string) Conf {
 		}
 		if input.PvalThreshold == 0 {
 			logMissingCol("pval_threshold", ii, "inputs")
-		} // new added: check fine mapping file path
-		if input.FmFilepath == "" {
-			logMissingCol("fine_mapping_filepath", ii, "inputs")
 		}
 	}
 
@@ -551,11 +548,14 @@ func findVariantFineMappingStats(conf []SumStatConf, selectedVariants map[Cpra]b
 	ch := make(chan CpraFineMappingStats)
 
 	for _, ssConf := range conf {
-		wg.Add(1)
-		go func(ssConf SumStatConf) {
-			defer wg.Done()
-			streamFmStats(ssConf, selectedVariants, ch)
-		}(ssConf)
+		// Only add finemapping stats if a finemapping file was provided
+		if ssConf.FmFilepath != "" {
+			wg.Add(1)
+			go func(ssConf SumStatConf) {
+				defer wg.Done()
+				streamFmStats(ssConf, selectedVariants, ch)
+			}(ssConf)
+		}
 	}
 
 	go func() {
@@ -662,11 +662,10 @@ func combineStatsAndFmStats(stats map[Cpra][]Stats, fmstats map[Cpra][]FineMappi
 	combinedStatsVariants := make(map[Cpra][]CombinedStats)
 
 	for cpra, statList := range stats {
-		fmStatList, found := fmstats[cpra]
-		if found {
-			combinedList := combineStatsAndFmStat(statList, fmStatList)
-			combinedStatsVariants[cpra] = combinedList
-		}
+		fmStatList := fmstats[cpra]
+
+		combinedList := combineStatsAndFmStat(statList, fmStatList)
+		combinedStatsVariants[cpra] = combinedList
 	}
 
 	return combinedStatsVariants
