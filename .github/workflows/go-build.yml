@@ -15,36 +15,36 @@ jobs:
           go-version: '1.20'
 
       - name: Build (linux x86-64)
-        run: mkdir artifact-linux-x86-64 && env GOOS=linux GOARCH=amd64 go build -C src -o ../artifact-linux-x86-64/mmp -v ./... && cp config/config.json.sample artifact-linux-x86-64 && tar -C artifact-linux-x86-64 -cvf mmp-linux-x86-64.tar mmp config.json.sample
+        run: mkdir artifact-linux-x86-64 && env GOOS=linux GOARCH=amd64 go build -C src -o ../artifact-linux-x86-64/mmpio -v ./... && cp config/config.json.sample artifact-linux-x86-64 && tar -C artifact-linux-x86-64 -cvf mmpio-linux-x86-64.tar mmpio config.json.sample
 
       - name: Build (macOS x86-64)
-        run: mkdir artifact-macos-intel && env GOOS=darwin GOARCH=amd64 go build -C src -o ../artifact-macos-intel/mmp -v ./... && cp config/config.json.sample artifact-macos-intel && tar -C artifact-macos-intel -cvf mmp-macos-intel.tar mmp config.json.sample
+        run: mkdir artifact-macos-intel && env GOOS=darwin GOARCH=amd64 go build -C src -o ../artifact-macos-intel/mmpio -v ./... && cp config/config.json.sample artifact-macos-intel && tar -C artifact-macos-intel -cvf mmpio-macos-intel.tar mmpio config.json.sample
 
       - name: Build (macOS ARM)
-        run: mkdir artifact-macos-arm64 && env GOOS=darwin GOARCH=arm64 go build -C src -o ../artifact-macos-arm64/mmp -v ./... && cp config/config.json.sample artifact-macos-arm64 && tar -C artifact-macos-arm64 -cvf mmp-macos-arm64.tar mmp config.json.sample
+        run: mkdir artifact-macos-arm64 && env GOOS=darwin GOARCH=arm64 go build -C src -o ../artifact-macos-arm64/mmpio -v ./... && cp config/config.json.sample artifact-macos-arm64 && tar -C artifact-macos-arm64 -cvf mmpio-macos-arm64.tar mmpio config.json.sample
 
       - name: Build (Windows x86-64)
-        run: mkdir artifact-windows-x86-64 && env GOOS=windows GOARCH=amd64 go build -C src -o ../artifact-windows-x86-64/mmp -v ./... && cp config/config.json.sample artifact-windows-x86-64 && tar -C artifact-windows-x86-64 -cvf mmp-windows-x86-64.tar mmp config.json.sample
+        run: mkdir artifact-windows-x86-64 && env GOOS=windows GOARCH=amd64 go build -C src -o ../artifact-windows-x86-64/mmpio -v ./... && cp config/config.json.sample artifact-windows-x86-64 && tar -C artifact-windows-x86-64 -cvf mmpio-windows-x86-64.tar mmpio config.json.sample
 
       - name: Test
         run: go test -C src -v ./...
 
       - uses: actions/upload-artifact@v3
         with:
-          name: mmp-linux-x86-64.tar
-          path: mmp-linux-x86-64.tar
+          name: mmpio-linux-x86-64.tar
+          path: mmpio-linux-x86-64.tar
 
       - uses: actions/upload-artifact@v3
         with:
-          name: mmp-macos-intel.tar
-          path: mmp-macos-intel.tar
+          name: mmpio-macos-intel.tar
+          path: mmpio-macos-intel.tar
 
       - uses: actions/upload-artifact@v3
         with:
-          name: mmp-macos-arm64.tar
-          path: mmp-macos-arm64.tar
+          name: mmpio-macos-arm64.tar
+          path: mmpio-macos-arm64.tar
 
       - uses: actions/upload-artifact@v3
         with:
-          name: mmp-windows-x86-64.tar
-          path: mmp-windows-x86-64.tar
+          name: mmpio-windows-x86-64.tar
+          path: mmpio-windows-x86-64.tar

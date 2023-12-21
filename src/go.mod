@@ -1,4 +1,4 @@
-module github.com/FINNGEN/mmp
+module github.com/FINNGEN/mmpio
 
 go 1.19
 
