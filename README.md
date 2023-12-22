@@ -54,15 +54,12 @@ This outputs a `mmp.tsv` file ready for upload on [MMP](https://geneviz.aalto.fi
 
 
 > [!NOTE]
-> **macOS users:** You may get a warning from macOS preventing you from running the binary:
+> **macOS users:** You may need extra steps to run the downloaded `mmpio` binary due to macOS security settings.
 >
-> > "mmpio" cannot be opened because the developer cannot be verified.
->
-> To bypass this you need to:
-> 1. Open the mmpio directory created in (1.) with Finder.
-> 2. Then *Right-click* on the `mmpio` binary file, then *Open*. (double-clicking to open will not work)
-> 3. Close the terminal window that opened.
-> 4. You should now be able to run the mmpio binary with `./mmpio`
+> Here is how to allow running the `mmpio` binary:
+> ```sh
+> xattr -d /path/to/downloaded/mmpio
+> ```
 
 
 ## For developers
