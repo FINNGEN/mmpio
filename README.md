@@ -2,10 +2,16 @@
 
 Tool to merge many GWAS summary statistics into one file ready to use in [MMP](https://geneviz.aalto.fi/MMP/dashboard/).
 
+Documentation for users: [Download](#download), [Configure](#configure) and [Run](#run).
+
+Want to contribute to the code? Chek the section [For developers](#for-developers).
+
+<img width="764" alt="mmpio overview" src="https://github.com/FINNGEN/mmpio/assets/4919840/fa282c45-60d5-4396-8ac3-8dcee477e620">
+
 
 ## For users
 
-**Download**
+### Download
 
 1. Make and go to a directory for MMP::io files, for example:
 
@@ -29,7 +35,7 @@ Tool to merge many GWAS summary statistics into one file ready to use in [MMP](h
    ```
 
 
-**Configure**
+### Configure
 
 Still in the mmpio directory you created in (1.), do:
 
@@ -40,7 +46,7 @@ Still in the mmpio directory you created in (1.), do:
 3. Specify groups of input files to be used for heterogeneity testing.
 
 
-**Run**
+### Run
 
 Your current directory should now be the mmpio directory created in (1.) and it should contain the files `mmpio` and `config.json`.
 
@@ -54,24 +60,24 @@ This outputs a `mmp.tsv` file ready for upload on [MMP](https://geneviz.aalto.fi
 
 
 > [!NOTE]
-> **macOS users:** You may need extra steps to run the downloaded `mmpio` binary due to macOS security settings.
+> **macOS users:** You may need an extra step to run the downloaded `mmpio` binary due to macOS security settings.
 >
 > Here is how to allow running the `mmpio` binary:
 > ```sh
-> xattr -d /path/to/downloaded/mmpio
+> xattr -d com.apple.quarantine /path/to/downloaded/mmpio
 > ```
 
 
 ## For developers
 
-**Requirements**
+### Requirements
 
 In order to make changes to the mmpio program, you need to have the following:
 
 1. The Go programming language.
    Installation instructions here: https://go.dev/doc/install
 
-**Building**
+### Building
 
 To build the `mmpio` binary:
 
