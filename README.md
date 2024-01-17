@@ -6,7 +6,8 @@ Documentation for users: [Download](#download), [Configure](#configure) and [Run
 
 Want to contribute to the code? Chek the section [For developers](#for-developers).
 
-<img width="764" alt="mmpio overview" src="https://github.com/FINNGEN/mmpio/assets/4919840/fa282c45-60d5-4396-8ac3-8dcee477e620">
+<img width="764" alt="mmpio overview" src="https://github.com/FINNGEN/mmpio/assets/4919840/f97b7196-398c-40eb-955d-c1a66ec04595">
+
 
 
 ## For users
