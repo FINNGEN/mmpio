@@ -12,7 +12,7 @@
       "col_sebeta": "sebeta",
       "col_af": "af_alt",
       "pval_threshold": 0.000001,
-      "fine_mapping_filepath": null
+      "finemap_filepath": null
     },
     {
       "tag": "Dataset2",
@@ -26,7 +26,7 @@
       "col_sebeta": "SEBETA",
       "col_af": "AF_ALT",
       "pval_threshold": 0.000001,
-      "fine_mapping_filepath": null
+      "finemap_filepath": null
     },
     {
       "tag": "Dataset3",
@@ -40,7 +40,7 @@
       "col_sebeta": "sebeta",
       "col_af": "af_alt",
       "pval_threshold": 0.000001,
-      "fine_mapping_filepath": null
+      "finemap_filepath": null
     }
   ],
   "heterogeneity_tests": [

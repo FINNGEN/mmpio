@@ -11,31 +11,30 @@ import (
 var outputPath string
 var configPath string
 
-// Structs relating to configuration.
-// Basically a 1:1 mapping to the conf fields and tree structure.
-type SumStatConf struct {
-	Tag           string  `json:"tag"`
-	Filepath      string  `json:"filepath"`
-	ColChrom      string  `json:"col_chrom"`
-	ColPos        string  `json:"col_pos"`
-	ColRef        string  `json:"col_ref"`
-	ColAlt        string  `json:"col_alt"`
-	ColPval       string  `json:"col_pval"`
-	ColBeta       string  `json:"col_beta"`
-	ColSebeta     string  `json:"col_sebeta"`
-	ColAf         string  `json:"col_af"`
-	PvalThreshold float64 `json:"pval_threshold"`
-	FmFilepath    string  `json:"fine_mapping_filepath"` // TODO can we make this true optional, as in: allow this field to be omitted completely from the config file
+// TODO harmonize name with names like in the structs of input_parsing (e.g. Sebeta => SEBeta)
+type InputConf struct {
+	Tag             string  `json:"tag"`
+	Filepath        string  `json:"filepath"`
+	ColChrom        string  `json:"col_chrom"`
+	ColPos          string  `json:"col_pos"`
+	ColRef          string  `json:"col_ref"`
+	ColAlt          string  `json:"col_alt"`
+	ColPVal         string  `json:"col_pval"`
+	ColBeta         string  `json:"col_beta"`
+	ColSEBeta       string  `json:"col_sebeta"`
+	ColAF           string  `json:"col_af"`
+	PValThreshold   float64 `json:"pval_threshold"`
+	FinemapFilepath string  `json:"finemap_filepath"`
 }
 
-type HeterogeneityTest struct {
+type HeterogeneityTestConf struct {
 	Tag     string   `json:"tag"`
 	Compare []string `json:"compare"`
 }
 
 type Conf struct {
-	Inputs             []SumStatConf       `json:"inputs"`
-	HeterogeneityTests []HeterogeneityTest `json:"heterogeneity_tests"`
+	Inputs             []InputConf             `json:"inputs"`
+	HeterogeneityTests []HeterogeneityTestConf `json:"heterogeneity_tests"`
 }
 
 func init() {
@@ -57,7 +56,6 @@ func readConf(filePath string) Conf {
 	// instead it will fill it with its default type value.
 	// Since our fields are all required we manually check that all fields were provided
 	// in the input configuration file.
-	// TODO make sure we allow for the fimemapping_path conf field to not exist.
 	if conf.Inputs == nil {
 		log.Fatal("Missing `inputs` field in the configuration file.")
 	}
@@ -66,38 +64,39 @@ func readConf(filePath string) Conf {
 	}
 	for ii, input := range conf.Inputs {
 		if input.Tag == "" {
-			logMissingCol("tag", ii, "inputs")
+			logMissingKey("tag", ii, "inputs")
 		}
 		if input.Filepath == "" {
-			logMissingCol("filepath", ii, "inputs")
+			logMissingKey("filepath", ii, "inputs")
 		}
 		if input.ColChrom == "" {
-			logMissingCol("col_chrom", ii, "inputs")
+			logMissingKey("col_chrom", ii, "inputs")
 		}
 		if input.ColPos == "" {
-			logMissingCol("col_pos", ii, "inputs")
+			logMissingKey("col_pos", ii, "inputs")
 		}
 		if input.ColRef == "" {
-			logMissingCol("col_ref", ii, "inputs")
+			logMissingKey("col_ref", ii, "inputs")
 		}
 		if input.ColAlt == "" {
-			logMissingCol("col_alt", ii, "inputs")
+			logMissingKey("col_alt", ii, "inputs")
 		}
-		if input.ColPval == "" {
-			logMissingCol("col_pval", ii, "inputs")
+		if input.ColPVal == "" {
+			logMissingKey("col_pval", ii, "inputs")
 		}
 		if input.ColBeta == "" {
-			logMissingCol("col_beta", ii, "inputs")
+			logMissingKey("col_beta", ii, "inputs")
 		}
-		if input.ColSebeta == "" {
-			logMissingCol("col_sebeta", ii, "inputs")
+		if input.ColSEBeta == "" {
+			logMissingKey("col_sebeta", ii, "inputs")
 		}
-		if input.ColAf == "" {
-			logMissingCol("col_af", ii, "inputs")
+		if input.ColAF == "" {
+			logMissingKey("col_af", ii, "inputs")
 		}
-		if input.PvalThreshold == 0 {
-			logMissingCol("pval_threshold", ii, "inputs")
+		if input.PValThreshold == 0 {
+			logMissingKey("pval_threshold", ii, "inputs")
 		}
+		// We don't check for the "fine_mapping_path" configuration key as it is optional.
 	}
 
 	if conf.HeterogeneityTests == nil {
@@ -105,10 +104,10 @@ func readConf(filePath string) Conf {
 	}
 	for jj, heterogeneity_test := range conf.HeterogeneityTests {
 		if heterogeneity_test.Tag == "" {
-			logMissingCol("tag", jj, "heterogeneity_tests")
+			logMissingKey("tag", jj, "heterogeneity_tests")
 		}
 		if heterogeneity_test.Compare == nil {
-			logMissingCol("compare", jj, "heterogeneity_tests")
+			logMissingKey("compare", jj, "heterogeneity_tests")
 		}
 		if len(heterogeneity_test.Compare) < 2 {
 			log.Fatal("Need at least 2 GWAS to run heterogeneity test. Instead got: ", heterogeneity_test.Compare)
@@ -118,6 +117,6 @@ func readConf(filePath string) Conf {
 	return conf
 }
 
-func logMissingCol(col_name string, element_index int, section string) {
-	log.Fatal("Missing `", col_name, "` field of element #", element_index, " in the `", section, "` section of the configuration file. Check config.json.sample for reference.")
+func logMissingKey(col_name string, element_index int, section string) {
+	log.Fatal("Missing `", col_name, "` key of element #", element_index, " in the `", section, "` section of the configuration file. Check config.json.sample for reference.")
 }

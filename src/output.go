@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: MIT
+
+// TODO
+// FIN: - bug (kind of) in that the data output has fields with "" instead of "NA" when a variant
+// is present in one dataset but not in the other.
+// - Also, het test values should be NA when only one dataset has values (currently has values and p=1)
+
+// Refactor writing to a TSV, we don't need to deal with column indices
+
+// Refactor the het test out of the TSV write?
+
 package main
 
 import (
@@ -10,7 +20,7 @@ import (
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-func writeMMPOutput(conf Conf, combinedStatsVariants map[Cpra][]CombinedStats) {
+func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 	var outRecords [][]string
 
 	statsCols := []string{"pval", "beta", "sebeta", "af", "pip", "cs"}
@@ -56,12 +66,12 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[Cpra][]CombinedStats) {
 					offset = lenCpraFields + ii*len(statsCols)
 				}
 			}
-			record[offset+0] = stats.Pval
+			record[offset+0] = stats.PVal
 			record[offset+1] = stats.Beta
-			record[offset+2] = stats.Sebeta
-			record[offset+3] = stats.Af
-			record[offset+4] = stats.Pip
-			record[offset+5] = stats.Cs
+			record[offset+2] = stats.SEBeta
+			record[offset+3] = stats.AF
+			record[offset+4] = stats.PIP
+			record[offset+5] = stats.CS
 		}
 
 		// Calculate meta stats here
@@ -72,7 +82,7 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[Cpra][]CombinedStats) {
 				if contains(test.Compare, stats.Tag) {
 					b, err := parseFloat64NaN(stats.Beta)
 					logCheck("parsing beta as float", err)
-					s, err := parseFloat64NaN(stats.Sebeta)
+					s, err := parseFloat64NaN(stats.SEBeta)
 					logCheck("parsing sebeta as float", err)
 					beta = append(beta, b)
 					sebeta = append(sebeta, s)
@@ -125,7 +135,7 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[Cpra][]CombinedStats) {
 	logCheck("writing TSV output", err)
 }
 
-func indexOfTest(tag string, tests []HeterogeneityTest) int {
+func indexOfTest(tag string, tests []HeterogeneityTestConf) int {
 	for i, test := range tests {
 		if test.Tag == tag {
 			return i
