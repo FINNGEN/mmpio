@@ -117,11 +117,13 @@ func combineFinemapping(conf Conf, variantStats map[CPRA][]OutputStats) {
 	finemapRowChannel := make(chan InputFinemapRow)
 
 	for _, inputConf := range conf.Inputs {
-		wg.Add(1)
-		go func(inputConf InputConf) {
-			defer wg.Done()
-			streamFinemapFile(inputConf, finemapRowChannel)
-		}(inputConf)
+		if inputConf.FinemapFilepath != "" {
+			wg.Add(1)
+			go func(inputConf InputConf) {
+				defer wg.Done()
+				streamFinemapFile(inputConf, finemapRowChannel)
+			}(inputConf)
+		}
 	}
 
 	go func() {
