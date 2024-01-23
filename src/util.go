@@ -29,6 +29,18 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
+func containsNaN(slice []float64) bool {
+	floatNaN, _ := strconv.ParseFloat("NaN", 64)
+
+	for _, elem := range slice {
+		if elem == floatNaN {
+			return true
+		}
+	}
+
+	return false
+}
+
 func parseFloat64NaN(input string) (float64, error) {
 	const parseableNaN = "NaN"
 
@@ -37,4 +49,11 @@ func parseFloat64NaN(input string) (float64, error) {
 	} else {
 		return strconv.ParseFloat(input, 64)
 	}
+}
+
+func formatFloat(number float64) string {
+	var withDecimalExponent byte = 'e'
+	precisionExactSmallest := -1
+
+	return strconv.FormatFloat(number, withDecimalExponent, precisionExactSmallest, 64)
 }

@@ -18,7 +18,6 @@ type CPRA struct {
 	Alt   string
 }
 
-// TODO merge into InputSummaryStatsRow if we don't need it on its own
 type SummaryStats struct {
 	PVal   string
 	Beta   string

@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: MIT
 
 // TODO
-// - Also, het test values should be NA when only one dataset has values (currently has values and p=1)
-
-// Refactor writing to a TSV, we don't need to deal with column indices
-
-// Refactor the het test out of the TSV write?
+// - Refactor writing to a TSV, we don't need to deal with column indices.
+//   See related ::STREAM-STRUCT
+// - test if speed regression
 
 package main
 
 import (
 	"encoding/csv"
 	"fmt"
-	"math"
 	"os"
-
-	"gonum.org/v1/gonum/stat/distuv"
 )
 
 func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
@@ -82,51 +77,57 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 			record[offset+5] = stats.CS
 		}
 
+		// Check tags with stats for het test
+		tagsWithStats := make(map[string]bool)
+		for _, stats := range multipleStats {
+			if stats.Beta != "NA" && stats.SEBeta != "NA" {
+				tagsWithStats[stats.Tag] = true
+			}
+		}
+
 		// Calculate meta stats here
 		for _, test := range conf.HeterogeneityTests {
-			var beta []float64
-			var sebeta []float64
-			for _, stats := range multipleStats {
-				if contains(test.Compare, stats.Tag) {
-					b, err := parseFloat64NaN(stats.Beta)
-					logCheck("parsing beta as float", err)
-					s, err := parseFloat64NaN(stats.SEBeta)
-					logCheck("parsing sebeta as float", err)
-					beta = append(beta, b)
-					sebeta = append(sebeta, s)
+			// Check the test has necessary data
+			hasNecessaryData := true
+			for _, tagCompare := range test.Compare {
+				_, found := tagsWithStats[tagCompare]
+				if !found {
+					hasNecessaryData = false
+					break
 				}
 			}
 
-			invVar := make([]float64, len(sebeta))
-			for i := range invVar {
-				invVar[i] = 1 / (sebeta[i] * sebeta[i])
+			var metaStats OutputMetaStats
+			if hasNecessaryData {
+				var betas []float64
+				var sebetas []float64
+				for _, stats := range multipleStats {
+					if contains(test.Compare, stats.Tag) {
+						beta, err := parseFloat64NaN(stats.Beta)
+						logCheck("parsing beta as float", err)
+						betas = append(betas, beta)
+
+						sebeta, err := parseFloat64NaN(stats.SEBeta)
+						logCheck("parsing sebeta as float", err)
+						sebetas = append(sebetas, sebeta)
+					}
+				}
+				metaStats = ComputeHeterogeneityTest(betas, sebetas)
+			} else {
+				// Don't compute the meta stats if some stats are missing
+				metaStats = OutputMetaStats{
+					Beta:    "NA",
+					SEBeta:  "NA",
+					PVal:    "NA",
+					HetPVal: "NA",
+				}
 			}
-			effInvVar := make([]float64, len(beta))
-			for i := range effInvVar {
-				effInvVar[i] = beta[i] * invVar[i]
-			}
-			metaBeta := sum(effInvVar) / sum(invVar)
-
-			metaSe := math.Sqrt(1 / sum(invVar))
-
-			metaPVal := 2 * distuv.UnitNormal.Survival(math.Abs(sum(effInvVar))/math.Sqrt(sum(invVar)))
-
-			// Calculate metaHetPVal here
-			var betaDev []float64
-			for i := range beta {
-				betaDev = append(betaDev, invVar[i]*(beta[i]-metaBeta)*(beta[i]-metaBeta))
-			}
-
-			metaHetPVal := 1 - distuv.ChiSquared{
-				K:   1,
-				Src: nil,
-			}.CDF(sum(betaDev))
 
 			offset := lenCpraFields + len(conf.Inputs)*len(statsCols) + indexOfTest(test.Tag, conf.HeterogeneityTests)*len(statsCols)
-			record[offset+0] = fmt.Sprintf("%f", metaBeta)
-			record[offset+1] = fmt.Sprintf("%f", metaSe)
-			record[offset+2] = fmt.Sprintf("%e", metaPVal)
-			record[offset+3] = fmt.Sprintf("%e", metaHetPVal)
+			record[offset+0] = metaStats.Beta
+			record[offset+1] = metaStats.SEBeta
+			record[offset+2] = metaStats.PVal
+			record[offset+3] = metaStats.HetPVal
 		}
 
 		outRecords = append(outRecords, record)

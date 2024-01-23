@@ -11,7 +11,6 @@ import (
 var outputPath string
 var configPath string
 
-// TODO harmonize name with names like in the structs of input_parsing (e.g. Sebeta => SEBeta)
 type InputConf struct {
 	Tag             string  `json:"tag"`
 	Filepath        string  `json:"filepath"`
