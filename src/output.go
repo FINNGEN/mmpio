@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 // TODO
-// FIN: - bug (kind of) in that the data output has fields with "" instead of "NA" when a variant
-// is present in one dataset but not in the other.
 // - Also, het test values should be NA when only one dataset has values (currently has values and p=1)
 
 // Refactor writing to a TSV, we don't need to deal with column indices
@@ -33,9 +31,9 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 
 	lenCpraFields := 4
 
-	for _, ssConf := range conf.Inputs {
+	for _, inputConf := range conf.Inputs {
 		for _, suffix := range statsCols {
-			field := fmt.Sprintf("%s_%s", ssConf.Tag, suffix)
+			field := fmt.Sprintf("%s_%s", inputConf.Tag, suffix)
 			headerFields = append(headerFields, field)
 		}
 	}
@@ -52,17 +50,27 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 
 	outRecords = append(outRecords, headerFields)
 
-	for cpra, cpraStats := range combinedStatsVariants {
+	for cpra, multipleStats := range combinedStatsVariants {
+		// Initialize the record
 		record := make([]string, len(headerFields))
 		record[0] = cpra.Chrom
 		record[1] = cpra.Pos
 		record[2] = cpra.Ref
 		record[3] = cpra.Alt
 
-		for _, stats := range cpraStats {
+		for ii := 4; ii < len(headerFields); ii++ {
+			// If a summary stats file doesn't contain a given CPRA, then
+			// we will show "NA" in the output for its stats.
+			// If has the given CPRA, then the "NA" will be overwritten
+			// by the actual summary stats values in the next step.
+			record[ii] = outputDefaultMissingValue
+		}
+
+		// Add summary statistics for each of the input
+		for _, stats := range multipleStats {
 			var offset int
-			for ii, ssConf := range conf.Inputs {
-				if ssConf.Tag == stats.Tag {
+			for ii, inputConf := range conf.Inputs {
+				if inputConf.Tag == stats.Tag {
 					offset = lenCpraFields + ii*len(statsCols)
 				}
 			}
@@ -78,7 +86,7 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 		for _, test := range conf.HeterogeneityTests {
 			var beta []float64
 			var sebeta []float64
-			for _, stats := range cpraStats {
+			for _, stats := range multipleStats {
 				if contains(test.Compare, stats.Tag) {
 					b, err := parseFloat64NaN(stats.Beta)
 					logCheck("parsing beta as float", err)
