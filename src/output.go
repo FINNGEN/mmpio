@@ -3,7 +3,6 @@
 // TODO
 // - Refactor writing to a TSV, we don't need to deal with column indices.
 //   See related ::STREAM-STRUCT
-// - test if speed regression
 
 package main
 

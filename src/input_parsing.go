@@ -89,49 +89,28 @@ func streamRowsFromSelection(inputConf InputConf, selectedVariants map[CPRA]bool
 // maybe with generics?
 // or with struct tags? https://go.dev/wiki/Well-known-struct-tags
 func streamSummaryStatsFile(inputConf InputConf, parsedRowChannel chan<- InputSummaryStatsRow) {
-	rowChannel := make(chan map[string]string)
-	go streamTsv(inputConf.Filepath, "gzip", rowChannel)
+	rowChannel := make(chan []string)
+	requestedColumns := []string{
+		inputConf.ColChrom,
+		inputConf.ColPos,
+		inputConf.ColRef,
+		inputConf.ColAlt,
+		inputConf.ColPVal,
+		inputConf.ColBeta,
+		inputConf.ColSEBeta,
+		inputConf.ColAF,
+	}
+	go streamTsv(inputConf.Filepath, "gzip", requestedColumns, rowChannel)
 
 	for row := range rowChannel {
-		chrom, found := row[inputConf.ColChrom]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColChrom, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		pos, found := row[inputConf.ColPos]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColPos, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		ref, found := row[inputConf.ColRef]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColRef, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		alt, found := row[inputConf.ColAlt]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColAlt, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		pval, found := row[inputConf.ColPVal]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColPVal, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		beta, found := row[inputConf.ColBeta]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColBeta, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		seBeta, found := row[inputConf.ColSEBeta]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColSEBeta, "` in header of input file `", inputConf.Filepath, "`.")
-		}
-
-		af, found := row[inputConf.ColAF]
-		if !found {
-			log.Fatal("Could not find column `", inputConf.ColAF, "` in header of input file `", inputConf.Filepath, "`.")
-		}
+		chrom := row[0]
+		pos := row[1]
+		ref := row[2]
+		alt := row[3]
+		pval := row[4]
+		beta := row[5]
+		seBeta := row[6]
+		af := row[7]
 
 		parsedRow := InputSummaryStatsRow{
 			Tag:          inputConf.Tag,
@@ -152,15 +131,20 @@ func streamFinemapFile(inputConf InputConf, parsedRowChannel chan<- InputFinemap
 
 	fmt.Printf("- processing %s\n", inputConf.Tag)
 
-	rowChannel := make(chan map[string]string)
-	go streamTsv(inputConf.FinemapFilepath, "uncompressed", rowChannel)
+	rowChannel := make(chan []string)
+	requestedColumns := []string{
+		colCPRA,
+		colPIP,
+		colCS,
+	}
+	go streamTsv(inputConf.FinemapFilepath, "uncompressed", requestedColumns, rowChannel)
 
 	for row := range rowChannel {
+		cpra := row[0]
+		pip := row[1]
+		cs := row[2]
+
 		// Parse the CPRA from assumed "C:P:R:A" format
-		cpra, found := row[colCPRA]
-		if !found {
-			log.Fatal("Could not find column `", colCPRA, "` in header of input file `", inputConf.FinemapFilepath, "`.")
-		}
 		splitCPRA := strings.Split(cpra, ":")
 		if len(splitCPRA) != 4 {
 			log.Fatal("Could not parse CPRA from value `", cpra, "`.")
@@ -169,16 +153,6 @@ func streamFinemapFile(inputConf InputConf, parsedRowChannel chan<- InputFinemap
 		pos := splitCPRA[1]
 		ref := splitCPRA[2]
 		alt := splitCPRA[3]
-
-		pip, found := row[colPIP]
-		if !found {
-			log.Fatal("Could not find column `", colPIP, "` in header of input file `", inputConf.FinemapFilepath, "`.")
-		}
-
-		cs, found := row[colCS]
-		if !found {
-			log.Fatal("Could not find column `", colCS, "` in header of input file `", inputConf.FinemapFilepath, "`.")
-		}
 
 		parsedRow := InputFinemapRow{
 			Tag:  inputConf.Tag,
@@ -193,19 +167,7 @@ func streamFinemapFile(inputConf InputConf, parsedRowChannel chan<- InputFinemap
 	fmt.Printf("* done %s\n", inputConf.Tag)
 }
 
-func streamTsv(filepath string, compressionType string, rowChannel chan<- map[string]string) {
-	// For now just assume we only deal with TSV files.
-	// Don't implement support for other input formats until we need it.
-	//
-	// Given an input file like this:
-	//     col1  col2  col3
-	//       a1    a2    a3
-	//       b1    b2    b3
-	// Send this data over the channel:
-	//     map[string]string{"col1": "a1", "col2": "a2", "col3": "a3"}
-	//     map[string]string{"col1": "b1", "col2": "b2", "col3": "b3"}
-	//     map[string]string{"col1": "c1", "col2": "c2", "col3": "c3"}
-
+func streamTsv(filepath string, compressionType string, columns []string, rowChannel chan<- []string) {
 	// Open file for reading
 	fReader, err := os.Open(filepath)
 	logCheck("opening file", err)
@@ -236,6 +198,22 @@ func streamTsv(filepath string, compressionType string, rowChannel chan<- map[st
 	header, err := tsvReader.Read()
 	logCheck("parsing TSV header", err)
 
+	headerToIndex := make(map[string]int)
+	for ii, headerColumn := range header {
+		headerToIndex[headerColumn] = ii
+	}
+
+	// Derive the field indices we want from the header
+	requestedColIndices := make([]int, len(columns))
+	for ii, requestedColumn := range columns {
+		headerColumnIndex, found := headerToIndex[requestedColumn]
+		if found {
+			requestedColIndices[ii] = headerColumnIndex
+		} else {
+			log.Fatal("Could not find column `", requestedColumn, "` in header of input file `", filepath, "`. Header: ", header)
+		}
+	}
+
 	// Emit the rows over the channel
 	for {
 		row, err := tsvReader.Read()
@@ -246,12 +224,16 @@ func streamTsv(filepath string, compressionType string, rowChannel chan<- map[st
 		}
 		logCheck("parsing TSV row", err)
 
-		// If valid, emit the data as a map of Header -> Row value
-		rowWithHeader := make(map[string]string)
-		for ii := 0; ii < len(header); ii++ {
-			rowWithHeader[header[ii]] = row[ii]
+		// This variable needs to be initialized *inside* the for loop.
+		// If it is assigned outside (in the hope of getting some performance improvements?),
+		// then the slice will be concurrently read and written, causing bad data parsing down the line.
+		// This was also caught by the go data race detector.
+		rowFromColumns := make([]string, len(columns))
+		for ii, requestedColIndex := range requestedColIndices {
+			rowFromColumns[ii] = row[requestedColIndex]
 		}
-		rowChannel <- rowWithHeader
+
+		rowChannel <- rowFromColumns
 	}
 
 	close(rowChannel)
