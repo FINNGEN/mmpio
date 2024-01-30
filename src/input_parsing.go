@@ -84,10 +84,6 @@ func streamRowsFromSelection(inputConf InputConf, selectedVariants map[CPRA]bool
 	fmt.Printf("* done %s\n", inputConf.Tag)
 }
 
-// TODO(future)::STREAM-STRUCT is there a way to pass a mapping of columns (string) to struct,
-// so that we stream any tabular file to a chan of struct (struct being any).
-// maybe with generics?
-// or with struct tags? https://go.dev/wiki/Well-known-struct-tags
 func streamSummaryStatsFile(inputConf InputConf, parsedRowChannel chan<- InputSummaryStatsRow) {
 	rowChannel := make(chan []string)
 	requestedColumns := []string{
@@ -123,7 +119,6 @@ func streamSummaryStatsFile(inputConf InputConf, parsedRowChannel chan<- InputSu
 	close(parsedRowChannel)
 }
 
-// TODO(future) see ::STREAM-STRUCT
 func streamFinemapFile(inputConf InputConf, parsedRowChannel chan<- InputFinemapRow) {
 	colCPRA := "v"
 	colPIP := "cs_specific_prob"

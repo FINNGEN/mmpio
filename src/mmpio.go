@@ -24,9 +24,6 @@ func main() {
 	writeMMPOutput(conf, variantStats)
 }
 
-// TODO(future)::STREAM-MULTIPLEXING any way to abstract over the multiplexing of streams?
-// Because for now we have to write the waitgroup ceremony here and in findVariants.
-// If so, put abstractions in 'parser_tabular_file.go'
 func scanForVariantSelection(conf Conf) map[CPRA]bool {
 	selectedVariants := make(map[CPRA]bool)
 
@@ -53,7 +50,6 @@ func scanForVariantSelection(conf Conf) map[CPRA]bool {
 	return selectedVariants
 }
 
-// TODO: see ::STREAM-MULTIPLEXING
 func findVariantStats(conf Conf, selectedVariants map[CPRA]bool) map[CPRA][]OutputStats {
 	variantMultipleStats := make(map[CPRA][]OutputStats)
 
@@ -100,7 +96,6 @@ func findVariantStats(conf Conf, selectedVariants map[CPRA]bool) map[CPRA][]Outp
 	return variantMultipleStats
 }
 
-// TODO: see ::STREAM-MULTIPLEXING
 func combineFinemapping(conf Conf, variantStats map[CPRA][]OutputStats) {
 	// We need this:
 	// Tag => CPRA => InputFinemapRow

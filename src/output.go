@@ -1,9 +1,5 @@
 // SPDX-License-Identifier: MIT
 
-// TODO
-// - Refactor writing to a TSV, we don't need to deal with column indices.
-//   See related ::STREAM-STRUCT
-
 package main
 
 import (
@@ -52,7 +48,7 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 		record[2] = cpra.Ref
 		record[3] = cpra.Alt
 
-		for ii := 4; ii < len(headerFields); ii++ {
+		for ii := lenCpraFields; ii < len(headerFields); ii++ {
 			// If a summary stats file doesn't contain a given CPRA, then
 			// we will show "NA" in the output for its stats.
 			// If has the given CPRA, then the "NA" will be overwritten
