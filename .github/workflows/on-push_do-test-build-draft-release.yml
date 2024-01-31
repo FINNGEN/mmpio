@@ -34,28 +34,28 @@ jobs:
       - name: Build (linux x86-64)
         run: >
           mkdir artifact-linux-x86-64
-          && env GOOS=linux GOARCH=amd64 go build -C src -o ../artifact-linux-x86-64/mmpio -v ./...
+          && env GOOS=linux GOARCH=amd64 go build -C src -ldflags "-X main.MMPioVersion=$(git describe --tags)" -o ../artifact-linux-x86-64/mmpio -v ./...
           && cp config/config.json.sample artifact-linux-x86-64
           && tar -C artifact-linux-x86-64 -cvf mmpio-linux-x86-64.tar mmpio config.json.sample
 
       - name: Build (macOS x86-64)
         run: >
           mkdir artifact-macos-intel
-          && env GOOS=darwin GOARCH=amd64 go build -C src -o ../artifact-macos-intel/mmpio -v ./...
+          && env GOOS=darwin GOARCH=amd64 go build -C src -ldflags "-X main.MMPioVersion=$(git describe --tags)" -o ../artifact-macos-intel/mmpio -v ./...
           && cp config/config.json.sample artifact-macos-intel
           && tar -C artifact-macos-intel -cvf mmpio-macos-intel.tar mmpio config.json.sample
 
       - name: Build (macOS ARM)
         run: >
           mkdir artifact-macos-arm64
-          && env GOOS=darwin GOARCH=arm64 go build -C src -o ../artifact-macos-arm64/mmpio -v ./...
+          && env GOOS=darwin GOARCH=arm64 go build -C src -ldflags "-X main.MMPioVersion=$(git describe --tags)" -o ../artifact-macos-arm64/mmpio -v ./...
           && cp config/config.json.sample artifact-macos-arm64
           && tar -C artifact-macos-arm64 -cvf mmpio-macos-arm64.tar mmpio config.json.sample
 
       - name: Build (Windows x86-64)
         run: >
           mkdir artifact-windows-x86-64
-          && env GOOS=windows GOARCH=amd64 go build -C src -o ../artifact-windows-x86-64/mmpio -v ./...
+          && env GOOS=windows GOARCH=amd64 go build -C src -ldflags "-X main.MMPioVersion=$(git describe --tags)" -o ../artifact-windows-x86-64/mmpio -v ./...
           && cp config/config.json.sample artifact-windows-x86-64
           && tar -C artifact-windows-x86-64 -cvf mmpio-windows-x86-64.tar mmpio config.json.sample
 

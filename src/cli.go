@@ -4,12 +4,19 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 )
 
 var outputPath string
 var configPath string
+var showVersion bool
+
+// Get the program version from git.
+// This should be passed as a build time variable, for example:
+// go build -ldflags "-X main.MMPioVersion=$(git describe --tags)"
+var MMPioVersion string
 
 type InputConf struct {
 	Tag             string  `json:"tag"`
@@ -37,9 +44,20 @@ type Conf struct {
 }
 
 func init() {
-	flag.StringVar(&outputPath, "output", "mmp.tsv", "Specify the output path (TSV)")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s (%s):\n", os.Args[0], MMPioVersion)
+		flag.PrintDefaults()
+	}
 	flag.StringVar(&configPath, "config", "config.json", "Specify the configuration path (JSON)")
+	flag.StringVar(&outputPath, "output", "mmp.tsv", "Specify the output path (TSV)")
+
+	flag.BoolVar(&showVersion, "version", false, "Show MMP::io version")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Fprintf(flag.CommandLine.Output(), "%s\n", MMPioVersion)
+		os.Exit(0)
+	}
 }
 
 func readConf(filePath string) Conf {
