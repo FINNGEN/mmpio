@@ -17,5 +17,12 @@ jobs:
           go-version: '1.21'
           cache-dependency-path: src/go.sum
 
-      - name: Test
+      - name: Running go test
         run: go test -C src -v ./...
+
+      - name: Running end-to-end tests
+        run: |
+          for test_file in tests/test_*/run.sh; do
+            echo "/// Running test for $test_file ///"
+            bash $test_file
+          done

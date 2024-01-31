@@ -1,0 +1,2 @@
+chrom	pos	ref	alt	Dataset1_pval	Dataset1_beta	Dataset1_sebeta	Dataset1_af	Dataset1_pip	Dataset1_cs
+12	5	G	T	1e-8	0.2	0.3	0.4	NA	NA

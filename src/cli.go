@@ -43,7 +43,7 @@ type Conf struct {
 	HeterogeneityTests []HeterogeneityTestConf `json:"heterogeneity_tests"`
 }
 
-func init() {
+func cliInit() {
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s (%s):\n", os.Args[0], MMPioVersion)
 		flag.PrintDefaults()
