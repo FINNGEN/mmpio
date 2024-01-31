@@ -1,0 +1,34 @@
+{
+  "inputs": [
+    {
+      "tag": "Dataset1",
+      "filepath": "data_sumstats_dataset1.tsv.gz",
+      "col_chrom": "Chrom",
+      "col_pos": "Pos",
+      "col_ref": "Ref",
+      "col_alt": "Alt",
+      "col_pval": "pval",
+      "col_beta": "beta",
+      "col_sebeta": "sebeta",
+      "col_af": "af",
+      "pval_threshold": 1e-6,
+      "finemap_filepath": null
+    },
+    {
+      "tag": "Dataset2",
+      "filepath": "data_sumstats_dataset2.tsv.gz",
+      "col_chrom": "Chrom",
+      "col_pos": "Pos",
+      "col_ref": "Ref",
+      "col_alt": "Alt",
+      "col_pval": "pval",
+      "col_beta": "beta",
+      "col_sebeta": "sebeta",
+      "col_af": "af",
+      "pval_threshold": 1e-6,
+      "finemap_filepath": null
+    }
+  ],
+  "heterogeneity_tests": [
+  ]
+}
