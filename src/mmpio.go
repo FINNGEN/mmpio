@@ -9,6 +9,7 @@ import (
 const outputDefaultMissingValue = "NA"
 
 func main() {
+	cliInit()
 	conf := readConf(configPath)
 
 	fmt.Println("[1/4] Scanning input files for variant selection...")
