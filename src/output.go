@@ -118,7 +118,7 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 				}
 			}
 
-			offset := lenCpraFields + len(conf.Inputs)*len(statsCols) + indexOfTest(test.Tag, conf.HeterogeneityTests)*len(statsCols)
+			offset := lenCpraFields + len(conf.Inputs)*len(statsCols) + indexOfTest(test.Tag, conf.HeterogeneityTests)*4
 			record[offset+0] = metaStats.Beta
 			record[offset+1] = metaStats.SEBeta
 			record[offset+2] = metaStats.PVal
