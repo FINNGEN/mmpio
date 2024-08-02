@@ -61,6 +61,8 @@ This outputs a `mmp.tsv` file ready for upload on [MMP](https://geneviz.aalto.fi
 
 
 > [!NOTE]
+> Finngen uses ‘23’ to represent the X chromosome.  Please convert any listing of SNPs with X-pos-ref-alt to be 23-pos-ref-alt before running mmpio.
+>
 > **macOS users:** You may need an extra step to run the downloaded `mmpio` binary due to macOS security settings.
 >
 > Here is how to allow running the `mmpio` binary:
