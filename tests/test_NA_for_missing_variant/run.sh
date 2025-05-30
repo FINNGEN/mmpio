@@ -17,4 +17,4 @@ cat data_sumstats_dataset2.tsv | gzip > data_sumstats_dataset2.tsv.gz
 
 ../../mmpio --config config.json --output data_out.tsv
 
-diff data_expected.tsv data_out.tsv
+git diff --no-index data_expected.tsv data_out.tsv

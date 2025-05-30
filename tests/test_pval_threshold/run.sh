@@ -14,4 +14,4 @@ cat data_sumstats_2rows.tsv | gzip > data_sumstats_2rows.tsv.gz
 # Run end-to-end test
 ../../mmpio --config config.json --output data_out.tsv
 
-diff data_expected.tsv data_out.tsv
+git diff --no-index data_expected.tsv data_out.tsv
