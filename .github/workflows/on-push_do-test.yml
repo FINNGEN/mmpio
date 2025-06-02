@@ -18,8 +18,4 @@ jobs:
           cache-dependency-path: src/go.sum
 
       - name: Running end-to-end tests
-        run: |
-          for test_file in tests/test_*/run.sh; do
-            echo "/// Running test for $test_file ///"
-            bash $test_file
-          done
+        run: bash tests/run_all.sh
