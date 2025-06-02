@@ -3,9 +3,11 @@
 package main
 
 import (
+	"cmp"
 	"encoding/csv"
 	"fmt"
 	"os"
+	"slices"
 )
 
 func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
@@ -127,6 +129,31 @@ func writeMMPOutput(conf Conf, combinedStatsVariants map[CPRA][]OutputStats) {
 
 		outRecords = append(outRecords, record)
 	}
+
+	// NOTE(Vincent 2025-06-03) Sort the output to make it deterministic, preventing flapping tests.
+	slices.SortFunc(outRecords, func(iiRecord, jjRecord []string) int {
+		// Keep the header line always as the first line
+		if iiRecord[0] == "chrom" {
+			return -1
+		}
+		if jjRecord[0] == "chrom" {
+			return 1
+		}
+
+		if iiRecord[0] != jjRecord[0] {
+			return cmp.Compare(iiRecord[0], jjRecord[0])
+		}
+		if iiRecord[1] != jjRecord[1] {
+			return cmp.Compare(iiRecord[1], jjRecord[1])
+		}
+		if iiRecord[2] != jjRecord[2] {
+			return cmp.Compare(iiRecord[2], jjRecord[2])
+		}
+		if iiRecord[3] != jjRecord[3] {
+			return cmp.Compare(iiRecord[3], jjRecord[3])
+		}
+		return 1
+	})
 
 	outFile, err := os.Create(outputPath)
 	logCheck("creating output file", err)
