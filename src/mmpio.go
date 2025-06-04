@@ -33,10 +33,10 @@ func scanForVariantSelection(conf Conf) map[CPRA]bool {
 
 	for _, inputConf := range conf.Inputs {
 		wg.Add(1)
-		go func(inputConf InputConf) {
+		go func() {
 			defer wg.Done()
 			streamVariantsAboveThreshold(inputConf, cpraChannel)
-		}(inputConf)
+		}()
 	}
 
 	go func() {
@@ -59,10 +59,10 @@ func findVariantStats(conf Conf, selectedVariants map[CPRA]bool) map[CPRA][]Outp
 
 	for _, inputConf := range conf.Inputs {
 		wg.Add(1)
-		go func(inputConf InputConf) {
+		go func() {
 			defer wg.Done()
 			streamRowsFromSelection(inputConf, selectedVariants, selectedRowChannel)
-		}(inputConf)
+		}()
 	}
 
 	go func() {
@@ -115,10 +115,10 @@ func combineFinemapping(conf Conf, variantStats map[CPRA][]OutputStats) {
 	for _, inputConf := range conf.Inputs {
 		if inputConf.FinemapFilepath != "" {
 			wg.Add(1)
-			go func(inputConf InputConf) {
+			go func() {
 				defer wg.Done()
 				streamFinemapFile(inputConf, finemapRowChannel)
-			}(inputConf)
+			}()
 		}
 	}
 
